@@ -14,7 +14,7 @@ class AppDrawer extends StatelessWidget {
         children: [
           UserAccountsDrawerHeader(
             accountName: Text(provider.username ?? "Guest"),
-            accountEmail: const Text("NIM: H1D023041"),
+            accountEmail: const Text(""),
             decoration: const BoxDecoration(color: Colors.blueGrey),
           ),
           ListTile(

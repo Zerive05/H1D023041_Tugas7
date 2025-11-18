@@ -1,3 +1,5 @@
+// lib/screens/home_screen.dart
+
 import 'package:flutter/material.dart';
 import '../widgets/app_drawer.dart';
 
@@ -22,11 +24,12 @@ class HomeScreen extends StatelessWidget {
         child: ListView.builder(
           itemCount: levels.length,
           itemBuilder: (ctx, index) {
+            final levelData = levels[index];
             return Card(
-              color: levels[index]['color'],
+              color: levelData['color'],
               child: ListTile(
                 title: Text(
-                  levels[index]['label'],
+                  levelData['label'],
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -34,12 +37,13 @@ class HomeScreen extends StatelessWidget {
                 ),
                 trailing: const Icon(Icons.play_arrow, color: Colors.white),
                 onTap: () {
+                  // Kirim argumen yang dibutuhkan oleh GameScreen
                   Navigator.pushNamed(
                     context,
                     '/game',
                     arguments: {
-                      'level': levels[index]['id'],
-                      'label': levels[index]['label'],
+                      'level': levelData['id'],
+                      'label': levelData['label'],
                     },
                   );
                 },

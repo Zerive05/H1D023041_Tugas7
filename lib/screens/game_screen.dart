@@ -1,3 +1,5 @@
+// lib/screens/game_screen.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,136 +13,29 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  late int level;
-  late String levelLabel;
   int secondsElapsed = 0;
   Timer? timer;
-
-  // --- TAMBAHAN 1: Variabel untuk menyimpan status inisialisasi ---
-  bool _isInit = false;
-  // --------------------------------------------------------------
-
-  final List<int> solvedBoard = [
-    5,
-    3,
-    4,
-    6,
-    7,
-    8,
-    9,
-    1,
-    2,
-    6,
-    7,
-    2,
-    1,
-    9,
-    5,
-    3,
-    4,
-    8,
-    1,
-    9,
-    8,
-    3,
-    4,
-    2,
-    5,
-    6,
-    7,
-    8,
-    5,
-    9,
-    7,
-    6,
-    1,
-    4,
-    2,
-    3,
-    4,
-    2,
-    6,
-    8,
-    5,
-    3,
-    7,
-    9,
-    1,
-    7,
-    1,
-    3,
-    9,
-    2,
-    4,
-    8,
-    5,
-    6,
-    9,
-    6,
-    1,
-    5,
-    3,
-    7,
-    2,
-    8,
-    4,
-    2,
-    8,
-    7,
-    4,
-    1,
-    9,
-    6,
-    3,
-    5,
-    3,
-    4,
-    5,
-    2,
-    8,
-    6,
-    1,
-    7,
-    9,
-  ];
-
-  late List<int?> currentBoard;
+  late Future<void> _gameInitializationFuture;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // PENTING: Inisiasi Future HANYA jika _gameInitializationFuture belum diinisiasi.
+    // Ini menggantikan _isInit = false yang rawan bug.
+    if (!mounted || timer != null) return;
 
-    // --- PERBAIKAN DI SINI ---
-    // Cek apakah sudah pernah di-init atau belum
-    if (!_isInit) {
-      final args = ModalRoute.of(context)!.settings.arguments as Map;
-      level = args['level'];
-      levelLabel = args['label'];
-      _initializeBoard();
-      _startTimer();
+    final args = ModalRoute.of(context)!.settings.arguments as Map;
+    final levelId = args['level'];
+    final levelLabel = args['label'];
 
-      _isInit = true; // Tandai bahwa inisialisasi sudah selesai
-    }
-    // -------------------------
-  }
+    final provider = Provider.of<GameProvider>(context, listen: false);
 
-  void _initializeBoard() {
-    // Semakin tinggi level, semakin banyak angka dihapus
-    int emptyCells =
-        level * 10; // Contoh: Level 1 = 10 kosong, Level 5 = 50 kosong
-    currentBoard = List.from(solvedBoard);
+    // KUNCI: Panggil initGameData yang mengembalikan Future
+    _gameInitializationFuture = provider.initGameData(levelId, levelLabel);
 
-    for (int i = 0; i < emptyCells; i++) {
-      // Logika random sederhana untuk menghapus sel
-      currentBoard[(i * 7) % 81] = null;
-    }
-  }
-
-  void _startTimer() {
+    // Timer dimulai setelah Future diinisiasi (tidak perlu menunggu Future selesai)
     timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        secondsElapsed++;
-      });
+      if (mounted) setState(() => secondsElapsed++);
     });
   }
 
@@ -150,84 +45,7 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
-  void _checkWin() {
-    if (!currentBoard.contains(null)) {
-      bool isCorrect = true;
-      for (int i = 0; i < 81; i++) {
-        if (currentBoard[i] != solvedBoard[i]) isCorrect = false;
-      }
-
-      if (isCorrect) {
-        timer?.cancel();
-        Provider.of<GameProvider>(
-          context,
-          listen: false,
-        ).saveScore(level, secondsElapsed);
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text("Menang!"),
-            content: Text("Waktu Anda: ${secondsElapsed} detik"),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("$levelLabel - Time: $secondsElapsed s")),
-      body: Column(
-        children: [
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 9,
-                childAspectRatio: 1,
-              ),
-              itemCount: 81,
-              itemBuilder: (ctx, index) {
-                bool isPreFilled = currentBoard[index] != null;
-                return GestureDetector(
-                  onTap: isPreFilled ? null : () => _inputNumber(index),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black38),
-                      color: (index ~/ 9 ~/ 3 + index % 9 ~/ 3) % 2 == 0
-                          ? Colors.grey[200]
-                          : Colors.white,
-                    ),
-                    child: Center(
-                      child: Text(
-                        currentBoard[index]?.toString() ?? '',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: isPreFilled
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isPreFilled ? Colors.black : Colors.blue,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _inputNumber(int index) async {
+  void _handleInput(int index) async {
     int? number = await showDialog<int>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -235,18 +53,119 @@ class _GameScreenState extends State<GameScreen> {
         children: List.generate(
           9,
           (i) => SimpleDialogOption(
+            padding: const EdgeInsets.all(12),
             onPressed: () => Navigator.pop(ctx, i + 1),
-            child: Text("${i + 1}", style: const TextStyle(fontSize: 18)),
+            child: Center(
+              child: Text("${i + 1}", style: const TextStyle(fontSize: 24)),
+            ),
           ),
         ),
       ),
     );
 
     if (number != null) {
-      setState(() {
-        currentBoard[index] = number;
-      });
-      _checkWin();
+      final provider = Provider.of<GameProvider>(context, listen: false);
+      provider.updateBoard(index, number);
+
+      if (provider.checkWin()) {
+        timer?.cancel();
+        provider.saveScore(provider.currentLevel, secondsElapsed);
+        _showWinDialog(provider.currentLevelLabel);
+      }
     }
+  }
+
+  void _showWinDialog(String levelLabel) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text("MENANG!"),
+        content: Text(
+          "Anda menyelesaikan level $levelLabel dalam $secondsElapsed detik.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Kembali ke Home
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // KUNCI ANTI-BUG: FutureBuilder memastikan data siap
+    return FutureBuilder(
+      future: _gameInitializationFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          // Tampilkan loading saat papan sedang di-generate
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Setelah data siap, gunakan Consumer untuk mendengarkan perubahan state
+        return Consumer<GameProvider>(
+          builder: (context, gameData, child) {
+            final levelLabel = gameData.currentLevelLabel;
+
+            return Scaffold(
+              appBar: AppBar(title: Text("$levelLabel - $secondsElapsed s")),
+              body: Column(
+                children: [
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 9,
+                            childAspectRatio: 1,
+                          ),
+                      itemCount: 81,
+                      itemBuilder: (ctx, index) {
+                        final value = gameData.currentBoard[index];
+                        final isLocked = gameData.isLocked[index];
+
+                        return GestureDetector(
+                          onTap: isLocked ? null : () => _handleInput(index),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.black38),
+                              color: (index ~/ 9 ~/ 3 + index % 9 ~/ 3) % 2 == 0
+                                  ? Colors.grey[200]
+                                  : Colors.white,
+                            ),
+                            child: Center(
+                              child: Text(
+                                value?.toString() ?? '',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: isLocked
+                                      ? FontWeight.w900
+                                      : FontWeight.normal,
+                                  color: isLocked
+                                      ? Colors.black
+                                      : Colors.blue[800],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

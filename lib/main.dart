@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/game_provider.dart';
@@ -27,12 +29,13 @@ class MyApp extends StatelessWidget {
       title: 'Sudoku by Zerive05',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       debugShowCheckedModeBanner: false,
-      // Implementasi Routes
       initialRoute: user == null ? '/login' : '/home',
+
       routes: {
         '/login': (context) => LoginScreen(),
         '/home': (context) => const HomeScreen(),
-        '/game': (context) => const GameScreen(),
+        '/game': (context) =>
+            const GameScreen(), // GameScreen mengambil argumen internal
         '/history': (context) => const HistoryScreen(),
       },
     );
